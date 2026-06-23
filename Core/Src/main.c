@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "OLED.h"
+#include <math.h>
 #include <stdint.h>
 /* USER CODE END Includes */
 
@@ -46,6 +47,8 @@
 
 /* USER CODE BEGIN PV */
 int16_t EncoderCount = 0;
+const float PWMFreqList[4] = {0.5,3,10,100};
+float PWMFreq = PWMFreqList[0];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,7 +61,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 int16_t GetEncoderCounts(void)
 {
-  return __HAL_TIM_GET_COUNTER(&htim1);
+  return __HAL_TIM_GET_COUNTER(&htim3);
 }
 /* USER CODE END 0 */
 
@@ -91,17 +94,18 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM1_Init();
   MX_TIM3_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   OLED_Init();
   OLED_Clear();
 
-  OLED_ShowString(1, 1, "Encoder Counts:");
-  OLED_ShowString(3, 1, "Encoder Speed:");
-  OLED_ShowString(4, 12, "/s"); 
+  OLED_ShowString(1, 1, "Encoder = ");
+  OLED_ShowString(2, 1, "PWM Frequency =");
+  OLED_ShowString(3, 10, "Hz"); 
 
-  HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
+  HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
   /* USER CODE END 2 */
 
@@ -109,10 +113,21 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    OLED_ShowSignedNum(2, 3, GetEncoderCounts(), 6);
-    OLED_ShowSignedNum(4, 3, GetEncoderCounts()-EncoderCount, 6);
     EncoderCount = GetEncoderCounts();
-    HAL_Delay(1000);
+    PWMFreq = PWMFreqList[EncoderCount/4];
+    __HAL_TIM_SET_PRESCALER(&htim2, (uint16_t)(72000000 / (10000*PWMFreq) - 1));
+
+    OLED_ShowNum(1, 11, EncoderCount/4, 1);
+    if (PWMFreq < 1)
+    {
+      OLED_ShowFloat(3, 4, PWMFreq, 1);
+      // OLED_ShowString(4, 6, " ");
+    }
+    else if (PWMFreq >= 1) {
+      OLED_ShowNum(3, 5, PWMFreq, 3);
+    }
+    
+    // HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
