@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "stm32_hal_legacy.h"
+#include "stm32f1xx_hal_tim.h"
 #include "tim.h"
 #include "gpio.h"
 
@@ -61,7 +63,16 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 int16_t GetEncoderCounts(void)
 {
-  return __HAL_TIM_GET_COUNTER(&htim3);
+  int16_t EncoderCounts = __HAL_TIM_GET_COUNTER(&htim3);
+  if (EncoderCounts < 0) {
+    __HAL_TIM_SET_COUNTER(&htim3, 0);
+    EncoderCounts = __HAL_TIM_GET_COUNTER(&htim3);
+  }
+  else if (EncoderCounts > 12) {
+    __HAL_TIM_SET_COUNTER(&htim3, 12);
+    EncoderCounts = __HAL_TIM_GET_COUNTER(&htim3);
+  }
+  return EncoderCounts;
 }
 /* USER CODE END 0 */
 
@@ -102,7 +113,7 @@ int main(void)
 
   OLED_ShowString(1, 1, "Encoder = ");
   OLED_ShowString(2, 1, "PWM Frequency =");
-  OLED_ShowString(3, 10, "Hz"); 
+  OLED_ShowString(3, 9, "Hz"); 
 
   HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
